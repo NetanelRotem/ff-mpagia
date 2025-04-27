@@ -4,8 +4,15 @@ import { CommandInput } from "./components/CommandInput/CommandInput";
 import { saveApiKey, getApiKey } from "./services/storage";
 import "./App.css";
 
+// Import the FileWithPath type to ensure compatibility
+interface FileWithPath {
+  name: string;
+  path: string;
+  size?: number;
+}
+
 function App() {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Partial<FileWithPath>[]>([]);
   const [apiKey, setApiKey] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,7 +34,7 @@ function App() {
     loadApiKey();
   }, []);
 
-  const handleFilesSelected = (files: File[]) => {
+  const handleFilesSelected = (files: Partial<FileWithPath>[]) => {
     setSelectedFiles(files);
     console.log("Files selected:", files.map(file => file.name));
   };

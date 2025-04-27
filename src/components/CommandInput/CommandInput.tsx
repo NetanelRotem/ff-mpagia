@@ -1,9 +1,17 @@
 import { useState } from "react";
 import { generateFFMPEGCommand } from "../../services/openai";
+import { core } from "@tauri-apps/api";
 import "./CommandInput.css";
 
+// Match the same FileWithPath interface used in App.tsx
+interface FileWithPath {
+  name: string;
+  path: string;
+  size?: number;
+}
+
 interface CommandInputProps {
-  selectedFiles: File[];
+  selectedFiles: Partial<FileWithPath>[];
   apiKey: string;
 }
 
@@ -13,6 +21,8 @@ export function CommandInput({ selectedFiles, apiKey }: CommandInputProps) {
   const [generatedCommand, setGeneratedCommand] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [runOutput, setRunOutput] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +60,83 @@ export function CommandInput({ selectedFiles, apiKey }: CommandInputProps) {
           console.error("Failed to copy command: ", err);
           // Optionally show an error message to the user
         });
+    }
+  };
+
+  const handleRunCommand = async () => {
+    if (!generatedCommand) return;
+    setIsRunning(true);
+    setRunOutput(null);
+    try {
+      // Instead of using regex splitting, we'll handle the command more carefully
+      let parts: string[] = [];
+      
+      // Extract the executable (ffmpeg) as the first part
+      const ffmpegIndex = generatedCommand.indexOf("ffmpeg");
+      if (ffmpegIndex === -1) throw new Error("Invalid command: ffmpeg not found");
+      
+      parts.push("ffmpeg");
+      
+      // Parse the rest of the command more carefully, preserving quoted paths
+      const restOfCommand = generatedCommand.slice(ffmpegIndex + 6).trim();
+      
+      // Process arguments, being careful with quoted strings
+      let currentArg = "";
+      let inQuotes = false;
+      let quoteChar = "";
+      
+      for (let i = 0; i < restOfCommand.length; i++) {
+        const char = restOfCommand[i];
+        
+        if ((char === '"' || char === "'") && (i === 0 || restOfCommand[i-1] !== '\\')) {
+          if (!inQuotes) {
+            inQuotes = true;
+            quoteChar = char;
+          } else if (char === quoteChar) {
+            inQuotes = false;
+            quoteChar = "";
+          } else {
+            currentArg += char;
+          }
+        } else if (char === ' ' && !inQuotes) {
+          if (currentArg) {
+            parts.push(currentArg);
+            currentArg = "";
+          }
+        } else {
+          currentArg += char;
+        }
+      }
+      
+      if (currentArg) {
+        parts.push(currentArg);
+      }
+      
+      // Filter out empty arguments
+      parts = parts.filter(part => part.trim() !== "");
+      
+      if (parts.length === 0) throw new Error("Invalid command");
+      
+      const cmd = parts[0];
+      const args = parts.slice(1).map(arg => {
+        // Handle file paths - remove surrounding quotes if present
+        if ((arg.startsWith('"') && arg.endsWith('"')) || 
+            (arg.startsWith("'") && arg.endsWith("'"))) {
+          return arg.slice(1, -1);
+        }
+        return arg;
+      });
+      
+      const output = await core.invoke<string>("run_terminal_cmd", {
+        cmd,
+        args,
+      });
+      setRunOutput(output);
+    } catch (err) {
+      alert(err);
+      setRunOutput(err instanceof Error ? err.message : "Failed to run command");
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -104,8 +191,22 @@ export function CommandInput({ selectedFiles, apiKey }: CommandInputProps) {
             >
               {copied ? "Copied!" : "Copy"}
             </button>
+            <button
+              onClick={handleRunCommand}
+              className="run-button"
+              disabled={isRunning}
+              style={{ marginLeft: 8 }}
+            >
+              {isRunning ? "Running..." : "Run Command"}
+            </button>
           </div>
           <pre>{generatedCommand}</pre>
+          {runOutput && (
+            <div className="run-output">
+              <strong>Output:</strong>
+              <pre>{runOutput}</pre>
+            </div>
+          )}
         </div>
       )}
     </div>

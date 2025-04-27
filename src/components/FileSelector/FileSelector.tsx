@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+// import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import './FileSelector.css';
 
@@ -13,11 +13,6 @@ interface FileWithPath {
   size?: number;
 }
 
-interface DragDropPayload {
-  type: 'hover' | 'drop' | 'cancel';
-  paths: string[];
-  position?: { x: number; y: number };
-}
 
 const FileSelector: React.FC<FileSelectorProps> = ({ onFilesSelected }) => {
   const [selectedFiles, setSelectedFiles] = useState<Partial<FileWithPath>[]>([]);
