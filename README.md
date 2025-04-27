@@ -2,6 +2,11 @@
 
 This application allows users to select media files and generate FFMPEG commands using AI based on natural language descriptions. It leverages the power of OpenAI's GPT models within a secure Tauri desktop environment.
 
+<video width="640" height="360" controls>
+  <source src="sample.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## ✨ Features
 
 *   **🔒 Secure API Key Management:** Prompts for OpenAI API key on first use and stores it securely using Tauri's store plugin.
@@ -77,7 +82,7 @@ Contributions are welcome! Please follow standard Git workflow (fork, branch, pu
 
 ## 📜 License
 
-[Specify License Here - e.g., MIT]
+[MIT]
 
 ## 🔮 Next Steps
 
